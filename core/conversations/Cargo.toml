@@ -34,7 +34,8 @@ rand = "0.9"
 # sds's tick takes a rand 0.10 RNG.
 rand_0_10 = { package = "rand", version = "0.10" }
 rand_core = { version = "0.6" }
-sds = { git = "https://github.com/logos-messaging/sds-rs", rev = "648283e44a9323ae0484b07de25f357228af6ca4" }
+# Backport of the SyncNamesMissing change onto 648283e, for chat-sim.
+sds = { git = "https://github.com/seugu/sds-rs", rev = "5c897cfad1d2c00b9bff87d1e4b507aeed439452" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0.17"

@@ -10,8 +10,8 @@ use crate::storage::{ConversationKind, ConversationMeta, ConversationStore};
 use crate::tracked_delivery::{TrackedDelivery, TrackedMessage};
 use crate::types::{ConvoMetadata, DebugData};
 use crate::{
-    Clock, DeliveryInfo, DeliveryService, GroupV2Config, IdentityProvider, Observation,
-    PublishReceipt, RegistrationService, WakeupService,
+    Clock, DeliveryInfo, DeliveryService, GroupV2Config, GroupV3Config, IdentityProvider,
+    Observation, PublishReceipt, RegistrationService, WakeupService,
 };
 use crate::{
     conversation::{Convo, ConvoBase, Debuggable, GroupConvo, Typed, mls_trace::record},
@@ -93,6 +93,11 @@ where
         self.services.demls_config = config;
     }
 
+    /// Overrides the GroupV3 timing. Applies to conversations created/joined after the call.
+    pub fn set_group_v3_config(&mut self, config: GroupV3Config) {
+        self.services.group_v3_config = config;
+    }
+
     /// Builds the inbox/account/MLS/causal state, subscribes both inbound
     /// addresses, and assembles the service bundle — shared by both constructors.
     fn assemble(
@@ -121,6 +126,7 @@ where
                 wakeup_service,
                 clock: Clock::default(),
                 demls_config: GroupV2Config::default(),
+                group_v3_config: GroupV3Config::default(),
                 readd_pending: HashMap::new(),
             },
             pq_inbox,

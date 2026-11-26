@@ -60,12 +60,13 @@ impl GroupV3Convo {
                 Event::MessageAcknowledged { message_id } => {
                     observations.push(Observation::Delivered(message_id))
                 }
-                Event::MissingDependencies { missing, .. } => to_fetch.extend(
-                    missing
-                        .into_iter()
-                        .filter_map(|entry| entry.retrieval_hint)
-                        .map(DeliveryMsgId::from),
-                ),
+                Event::MissingDependencies { missing, .. } => to_fetch.extend(fetchable(missing)),
+                // Without this, a commit lost here is noticed only when a content message names
+                // it, often after the finalize timeout, and this member finalizes another.
+                Event::SyncNamesMissing {
+                    missing_dependencies,
+                    ..
+                } => to_fetch.extend(fetchable(missing_dependencies)),
                 other => debug!(convo = %self.convo_id, ?other, "sds event"),
             }
         }
@@ -254,4 +255,11 @@ impl GroupV3Convo {
         debug!(convo = %self.convo_id, epoch=%curr_epoch, %commit_epoch, ?fingerprint, "incoming commit deferred");
         Ok(self.default_outcome())
     }
+}
+
+fn fetchable(missing: Vec<sds::HistoryEntry>) -> impl Iterator<Item = DeliveryMsgId> {
+    missing
+        .into_iter()
+        .filter_map(|entry| entry.retrieval_hint)
+        .map(DeliveryMsgId::from)
 }
