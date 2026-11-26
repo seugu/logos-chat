@@ -18,7 +18,7 @@ pub use group_v1::GroupV1Convo;
 pub use group_v2::{GroupV2Convo, GroupV2Frame, GroupV2Payload};
 #[cfg(any(test, feature = "test-support"))]
 pub use group_v3::inspect as group_v3_wire;
-pub use group_v3::{GroupV3Convo, SyncState};
+pub use group_v3::{GroupV3Config, GroupV3Convo, SyncState};
 
 pub type ConversationId = String;
 pub type ConversationIdRef<'a> = &'a str;

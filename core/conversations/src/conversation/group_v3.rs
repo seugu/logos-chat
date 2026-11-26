@@ -69,13 +69,32 @@ type Frame = payloads::GroupV3Frame;
 // Fires SDS's resend and sync deadlines within a second. `wakeup_in` adds a timer rather than
 // replacing one, so only `init` and `wakeup` arm it.
 const SDS_TICK_INTERVAL: Duration = Duration::from_secs(1);
-// How long this member waits, from the first commit it defers, sent or received, before it
-// finalizes one. The `test-fast-commits` feature puts it under one SDS tick, so a commit lands
-// on the next tick.
+// The `test-fast-commits` feature puts the finalize timeout under one SDS tick, so a commit
+// lands on the next tick.
 #[cfg(not(feature = "test-fast-commits"))]
 const COMMIT_FINALIZE_TIMEOUT: Duration = Duration::from_secs(120);
 #[cfg(feature = "test-fast-commits")]
 const COMMIT_FINALIZE_TIMEOUT: Duration = Duration::from_millis(100);
+// A member that has nothing to send still acknowledges a message within this delay, so its
+// sender stops resending and later histories name the message to members that missed it.
+const SDS_ACK_SYNC_MAX_DELAY_MS: u64 = 5_000;
+
+/// Timing for GroupV3 conversations, set with [`crate::Core::set_group_v3_config`]. Every member
+/// of a group should use the same values.
+#[derive(Clone, Debug)]
+pub struct GroupV3Config {
+    /// How long a member waits, from the first commit it defers, sent or received, before it
+    /// finalizes one. It must outlast the time a lost commit takes to be fetched again.
+    pub commit_finalize_timeout: Duration,
+}
+
+impl Default for GroupV3Config {
+    fn default() -> Self {
+        Self {
+            commit_finalize_timeout: COMMIT_FINALIZE_TIMEOUT,
+        }
+    }
+}
 // Max messages deferred for a later epoch. Copy value from SDS's incoming buffer.
 // TODO: Derive the value from SDS library or based on storage size.
 const MAX_LATER_EPOCH_MSGS: usize = 500;
@@ -94,6 +113,7 @@ fn create_sds_channel<S: ExternalServices>(
     let mut config = Config::new(cx.mls_identity.signer_key().to_string(), convo_id);
     config.repair = None;
     config.start = start;
+    config.ack_sync_max_delay_ms = Some(SDS_ACK_SYNC_MAX_DELAY_MS);
     Channel::new(config).map_err(ChatError::generic)
 }
 
@@ -207,7 +227,7 @@ impl GroupV3Convo {
             mls_group,
             channel,
             deferred_commits: HashMap::default(),
-            finality: finality::Timeout::new(COMMIT_FINALIZE_TIMEOUT),
+            finality: finality::Timeout::new(cx.group_v3_config.commit_finalize_timeout),
             beacons: Beacons::default(),
             readds: VecDeque::new(),
             readd_attempt: 0,

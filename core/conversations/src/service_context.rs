@@ -10,7 +10,7 @@ use crate::inbox_v2::{MlsEphemeralPqProvider, MlsIdentityProvider};
 use crate::service_traits::AuthService;
 use crate::service_traits::WakeupService;
 use crate::tracked_delivery::TrackedDelivery;
-use crate::{ConversationStore, DeliveryService, RegistrationService};
+use crate::{ConversationStore, DeliveryService, GroupV3Config, RegistrationService};
 
 /// Bundles the external service types (`DS`, `RS`, `CS`) behind one `S`. The
 /// `(DS, RS, CS)` tuple impl lets them still be supplied separately.
@@ -56,6 +56,8 @@ pub(crate) struct ServiceContext<S: ExternalServices> {
     /// create/join. The creator's phase durations reach joiners inside the
     /// welcome's `ConversationSync`.
     pub(crate) demls_config: de_mls::ConversationConfig,
+    /// Timing for GroupV3 conversations, applied at create/join.
+    pub(crate) group_v3_config: GroupV3Config,
     /// GroupV3 conversations that asked to be re-added, by convo id; only
     /// these accept a replacing Welcome.
     pub(crate) readd_pending: HashMap<String, ReAddTarget>,

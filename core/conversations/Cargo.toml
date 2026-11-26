@@ -34,7 +34,8 @@ rand = "0.9"
 # sds's tick takes a rand 0.10 RNG.
 rand_0_10 = { package = "rand", version = "0.10" }
 rand_core = { version = "0.6" }
-sds = { git = "https://github.com/logos-messaging/sds-rs", rev = "5c50a1a6ee1500df02f2b376cfd404f89f3d5b52" }
+# TODO: point back at logos-messaging/sds-rs once the SyncNamesMissing change is merged there.
+sds = { git = "https://github.com/seugu/sds-rs", rev = "0deea40d6eb4e959b8a435b55faa69a002673f19" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0.17"
