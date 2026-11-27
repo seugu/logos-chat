@@ -45,30 +45,37 @@ seconds after the loss. The ACK syncs make those syncs frequent even when few me
 
 ## Results
 
-These are chat-sim runs on `grow-waku-loss-{1,5}-groupv3`: 200-member pool, three adders per round,
-with extra per-packet jitter of 0 or 2 s. "Fork-free" means the whole run ended as one group.
+The runs use chat-sim's own GroupV3 scenarios and tools, with 10 runs per `grow` scenario and 2 per
+`50-epochs` scenario. `master` is chat-sim as is. "This change" is the same chat-sim with logos-chat
+pinned to this change backported onto `a74ad35`, the revision chat-sim runs. The count is of runs
+that ended as one group: a single main line, no side branches, and no member behind.
 
-| Mode | Fork-free runs | 1-add round at 5% loss | MB per epoch at 1% loss |
-|---|---|---|---|
-| Before | 0 / 40 | 121.5 s | 2.0 |
-| Fetch on sync only | 40 / 40 | 155–157 s | 2.6 |
-| Fetch on sync + ACK sync (this change) | 39 / 40 | 122–125 s | 3.7–4.0 |
-| ACK sync only | 0 / 40 | 121.5 s | 2.6–3.2 |
+| Scenario | `master` | This change |
+|---|---|---|
+| `grow-waku-loss-0-groupv3` | 10/10 | 10/10 |
+| `grow-waku-loss-0.1-groupv3` | 4/10 | **10/10** |
+| `grow-waku-loss-0.5-groupv3` | 1/10 | **10/10** |
+| `grow-waku-loss-1-groupv3` | 0/10 | **10/10** |
+| `grow-waku-loss-5-groupv3` | 0/10 | **10/10** |
+| `50-epochs-by-saro-waku-loss-1-groupv3` | 1/2 | **2/2** |
+| `50-epochs-by-saro-waku-loss-5-groupv3` | 0/2 | **2/2** |
 
-- The ACK sync alone does not help. Faster ACKs only stop resends sooner. The fetch on sync is what
-  removes the forks.
-- The ACK sync keeps rounds short under loss, cutting a 1-add round from about 155 s to about
-  122 s at 5% loss. Before, only 5% of commits were ever acknowledged by every member. Now
-  97–100% are. At 1% loss the median time to that is about 7 s. At 5% loss it is about 2 min,
-  because a lost ACK sync waits for the member's next message.
-- A wider sweep of the fetch on sync alone was 149 of 150 runs fork-free, over 0.5–5% loss and
-  0–10 s jitter.
-- The remaining fork is a different case. A member joined through a commit that then lost, and
-  waited on dependencies that never arrived for it.
+- **grow** has a 200-member pool, and each round 1 to 3 members commit at the same instant, aiming
+  for 50 epochs. On `master`, the trunk at 5% loss reaches epoch 23 on average, with about 5 side
+  branches. With this change it reaches 50 in every run.
+- **50-epochs** has one committer, so it never forked. On `master`, members fell behind at 1% and
+  5% loss. With this change none do, and 50 epochs at 5% loss take 6254 s of virtual time instead
+  of 7849 s.
+- `sim matrix` gives the verdict `later`: no run forked earlier with this change. At 0.5%, 1% and
+  5% loss the difference is beyond chance (sign test p ≤ 0.004).
+- A run is deterministic on Linux. The numbers were reproduced to the second on a second machine.
 
-The numbers come from the experiment builds on logos-chat `a74ad35` and sds-rs `648283e`, which
-chat-sim pins, with 10 seeds per cell. This change ports the same two behaviours onto current
-`main`. It has not been re-run in chat-sim, which needs to move to this revision first.
+To reproduce them, or to run your own variants (loss, delays, number of adders, partitions), see
+`DELIVERY-FIX.md` on [seugu/chat-sim `sds-reliability-fixes`](https://github.com/seugu/chat-sim/tree/sds-reliability-fixes).
+The backports it runs are
+[seugu/logos-chat `sds-reliability-fixes-a74ad35`](https://github.com/seugu/logos-chat/tree/sds-reliability-fixes-a74ad35)
+and [seugu/sds-rs `sync-reports-missing-648283e`](https://github.com/seugu/sds-rs/tree/sync-reports-missing-648283e).
+This change on `main` has not been run in chat-sim, which still pins `a74ad35`.
 
 ## Limits
 
@@ -76,4 +83,4 @@ chat-sim pins, with 10 seeds per cell. This change ports the same two behaviours
   forks the group. This change makes that rare. It does not make it impossible.
 - An SDS acknowledgement means "received", not "applied". A message can be acknowledged while it
   still waits in the causal buffer.
-- More traffic: about 1.4–1.5× the bytes of fetch on sync alone, about 2× before.
+- More traffic: in earlier experiments the ACK syncs about doubled the bytes per epoch.
